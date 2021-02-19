@@ -4,12 +4,15 @@ from PIL import Image
 import facenet_pytorch as fn
 
 class FaceDetector:
-    def __init__(self, method='mtcnn'):
+    def __init__(self, method='mtcnn', cascPath=None):
         assert method in ['mtcnn', 'haar'], 'Method not supported'
         self.method = method
         if method == 'mtcnn':
             self.mtcnn = fn.MTCNN(select_largest=False,
                                   device='cpu')
+        if method == 'haar':
+            assert cascPath is not None, 'Cascad not provided'
+            self.faceCascade = cv2.CascadeClassifier(cascPath)
 
     def detect(self, image):
         if self.method == 'mtcnn':
@@ -17,13 +20,27 @@ class FaceDetector:
                     Image.fromarray(image),
                     landmarks=True
                     )
+            return faces, landmarks
 
         elif self.method == 'haar':
-            pass
-        return faces, landmarks
+            image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+            faces = self.faceCascade.detectMultiScale(
+                        image,
+                        scaleFactor=1.1,
+                        minNeighbors=5,
+                        minSize=(30, 30),
+                        flags=cv2.CASCADE_SCALE_IMAGE
+                    )
+
+            new_faces = []
+            for face in faces:
+                x, y, h, w = face
+                new_faces.append([x, y, x+w, y+h])
+            return new_faces, None
 
 
 cap = cv2.VideoCapture('output.avi')
+# detector = FaceDetector('haar', './haarcascade_frontalface_default.xml')
 detector = FaceDetector('mtcnn')
 success, frame = cap.read()
 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -32,9 +49,10 @@ while success:
     # check if faces are present
     if faces is not None:
         for face in faces:
-            x1, y1, x2, y2 = face.squeeze()
+            x1, y1, x2, y2 = face
             cv2.rectangle(frame, (x1, y1),
                           (x2, y2), (255, 0, 0), 2)
+    if landmarks is not None:
         for landmark in landmarks:
             for point in landmark:
                 x, y = point
