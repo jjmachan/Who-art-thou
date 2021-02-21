@@ -1,4 +1,6 @@
 from collections import defaultdict
+import pickle
+import os
 
 import torch
 from torch.utils.data import DataLoader
@@ -11,7 +13,7 @@ from face_tracker import FaceDetector
 
 
 class Matcher:
-    def __init__(self, path):
+    def __init__(self, path, from_cache=True):
         self.resnet = fn.InceptionResnetV1(
             pretrained='vggface2').eval()
         self.mtcnn = fn.MTCNN(
@@ -19,7 +21,13 @@ class Matcher:
                 thresholds=[0.6, 0.7, 0.7], factor=0.709,
                 post_process=True
             )
-        self.matcher_db = self.init_matcher_db(path)
+        cache_path = os.path.join(path, 'faces.db')
+        if os.path.exists(cache_path) and from_cache:
+            print('Loading from: ', cache_path)
+            with open(cache_path, 'rb') as f:
+                self.matcher_db = pickle.load(f)
+        else:
+            self.matcher_db = self.init_matcher_db(path)
 
     @staticmethod
     def collate_fn(x):
@@ -47,6 +55,9 @@ class Matcher:
         for name, emb in zip(names, embeddings):
             matcher_db[name].append(emb)
 
+        with open('./db/faces.db', 'wb') as f:
+            pickle.dump(matcher_db, f, pickle.HIGHEST_PROTOCOL)
+            print('matcher_db is cached!')
         return matcher_db
 
     def recognize(self, img):
