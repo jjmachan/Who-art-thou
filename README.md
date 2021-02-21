@@ -1,6 +1,10 @@
 # Who-art-thou
 My personal dive into using deep-learning for face recognition/verification
 
+<p align="center">
+  <img src="https://github.com/jjmachan/Who-art-thou/blob/master/processed.gif" />
+</p>
+
 This is something I'm building to get a better understanding of what it is like to create a facial recognition system 
 that is can work in the wild (and not just a fun tutorial). The goal is to build a facial recoginition system that is
 1. accurate
