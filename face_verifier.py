@@ -1,6 +1,7 @@
 from collections import defaultdict
 import pickle
 import os
+import argparse
 
 import torch
 from torch.utils.data import DataLoader
@@ -13,7 +14,7 @@ from face_tracker import FaceDetector
 
 
 class Matcher:
-    def __init__(self, path, from_cache=True):
+    def __init__(self, path, recache=False):
         self.resnet = fn.InceptionResnetV1(
             pretrained='vggface2').eval()
         self.mtcnn = fn.MTCNN(
@@ -22,11 +23,12 @@ class Matcher:
                 post_process=True
             )
         cache_path = os.path.join(path, 'faces.db')
-        if os.path.exists(cache_path) and from_cache:
+        if os.path.exists(cache_path) and not recache:
             print('Loading from: ', cache_path)
             with open(cache_path, 'rb') as f:
                 self.matcher_db = pickle.load(f)
         else:
+            print('Building Cache...')
             self.matcher_db = self.init_matcher_db(path)
 
     @staticmethod
@@ -96,16 +98,41 @@ class Matcher:
 
 
 if __name__ == '__main__':
-    cap = cv2.VideoCapture('output.avi')
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+            '-o', '--output',
+            help='The name of the file to save recoded video to',
+            default='processed.avi'
+            )
+    parser.add_argument(
+            '-i', '--input',
+            help='The file to run verifier on.',
+            default='output.avi'
+            )
+    parser.add_argument(
+            'name',
+            help='The name of the person to run verification on'
+            )
+    parser.add_argument(
+            '--recache',
+            help='Re-cache the table again',
+            action='store_true'
+            )
+    args = parser.parse_args()
+
+    # load vido files
+    cap = cv2.VideoCapture(args.input)
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    out = cv2.VideoWriter(args.output, fourcc, 20.0, (640,480))
     # detector = FaceDetector('haar', './haarcascade_frontalface_default.xml')
     detector = FaceDetector('mtcnn')
 
-    matcher = Matcher('./db/')
+    matcher = Matcher('./db/', recache=args.recache)
     success, frame = cap.read()
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     while success:
         faces, landmarks = detector.detect(frame)
-        isVerified = matcher.verify(frame, 'Jithin')
+        isVerified = matcher.verify(frame, args.name)
 
         # check if faces are present
         if faces is not None:
@@ -132,6 +159,7 @@ if __name__ == '__main__':
 
 
         cv2.imshow('frame', frame)
+        out.write(frame)
 
         if cv2.waitKey(1) &0xFF == ord('q'):
             break
@@ -139,4 +167,5 @@ if __name__ == '__main__':
         success, frame = cap.read()
 
     cap.release()
+    out.release()
     cv2.destroyAllWindows()
