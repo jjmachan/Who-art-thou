@@ -39,32 +39,33 @@ class FaceDetector:
             return new_faces, None
 
 
-cap = cv2.VideoCapture('output.avi')
-# detector = FaceDetector('haar', './haarcascade_frontalface_default.xml')
-detector = FaceDetector('mtcnn')
-success, frame = cap.read()
-frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-while success:
-    faces, landmarks = detector.detect(frame)
-    # check if faces are present
-    if faces is not None:
-        for face in faces:
-            x1, y1, x2, y2 = face
-            cv2.rectangle(frame, (x1, y1),
-                          (x2, y2), (255, 0, 0), 2)
-    if landmarks is not None:
-        for landmark in landmarks:
-            for point in landmark:
-                x, y = point
-                cv2.circle(frame, (x, y), radius=2,
-                           color=(0, 255, 0), thickness=-1)
-
-    cv2.imshow('frame', frame)
-
-    if cv2.waitKey(1) &0xFF == ord('q'):
-        break
-
+if __name__ == '__main__':
+    cap = cv2.VideoCapture('output.avi')
+    # detector = FaceDetector('haar', './haarcascade_frontalface_default.xml')
+    detector = FaceDetector('mtcnn')
     success, frame = cap.read()
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    while success:
+        faces, landmarks = detector.detect(frame)
+        # check if faces are present
+        if faces is not None:
+            for face in faces:
+                x1, y1, x2, y2 = face
+                cv2.rectangle(frame, (x1, y1),
+                              (x2, y2), (0, 0, 255), 2)
+        if landmarks is not None:
+            for landmark in landmarks:
+                for point in landmark:
+                    x, y = point
+                    cv2.circle(frame, (x, y), radius=2,
+                               color=(0, 255, 0), thickness=-1)
 
-cap.release()
-cv2.destroyAllWindows()
+        cv2.imshow('frame', frame)
+
+        if cv2.waitKey(1) &0xFF == ord('q'):
+            break
+
+        success, frame = cap.read()
+
+    cap.release()
+    cv2.destroyAllWindows()
